@@ -9,8 +9,18 @@
 
 #include <ESP8266WiFi.h>
 
+const int redPin = 4;
+const int greenPin = 14;
+const int bluePin = 12;
+
 const char* ssid = "Henry's Living Room 2.4GHz";
 const char* password = "13913954971";
+
+
+// RGB
+int red = 255;
+int green = 255;
+int blue = 255;
 
 // Create an instance of the server
 // specify the port to listen on as an argument
@@ -20,9 +30,13 @@ void setup() {
     Serial.begin(9600);
     delay(10);
 
-    // prepare D2(GPIO4)
-    pinMode(4, OUTPUT);
-    digitalWrite(4, LOW);
+    pinMode(redPin, OUTPUT);
+    pinMode(greenPin, OUTPUT);
+    pinMode(bluePin, OUTPUT);
+
+    analogWrite(redPin, 0);
+    analogWrite(greenPin, 0);
+    analogWrite(bluePin, 0);
   
     // Connect to WiFi network
     Serial.println();
@@ -57,7 +71,6 @@ void loop() {
     }
   
     // Wait until the client sends some data
-    Serial.println("new client");
     while(!client.available())
     {
         delay(1);
@@ -65,38 +78,68 @@ void loop() {
   
     // Read the first line of the request
     String req = client.readStringUntil('\r');
-    Serial.println(req);
     client.flush();
   
     // Match the request
-    int val;
-    if (req.indexOf("/on") != -1)
+    bool on;
+    if (req.indexOf("/rgb/") != -1)
     {
-        val = HIGH;
+        on = true;
+        red = hexToInt(req.substring(9, 11));
+        green = hexToInt(req.substring(11, 13));
+        blue = hexToInt(req.substring(13, 15));
+    }
+    else if (req.indexOf("/on") != -1)
+    {
+        on = true;
+        Serial.println("Light on");
     }
     else if (req.indexOf("/off") != -1)
-        val = LOW;
+    {
+        on = false;
+        Serial.println("Light off");
+    }
     else
     {
-        Serial.println("invalid request");
         client.stop();
         return;
     }
 
     // Set GPIO4 according to the request
-    digitalWrite(4, val);
+    if (on)
+    {
+        analogWrite(redPin, red);
+        analogWrite(greenPin, green);
+        analogWrite(bluePin, blue);
+    }
+    else
+    {
+        analogWrite(redPin, 0);
+        analogWrite(greenPin, 0);
+        analogWrite(bluePin, 0);
+    }
+    
     client.flush();
 
-    // Prepare the response
-    String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
-    s += (val) ? "on" : "off";
-
     // Send the response to the client
-    client.print(s);
+    client.print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nOK");
     delay(1);
-    Serial.println("Client disonnected");
 
     // The client will actually be disconnected 
     // when the function returns and 'client' object is detroyed
 }
 
+
+char* string2char(String command)
+{
+    if (command.length() != 0)
+    {
+        char *p = const_cast<char*>(command.c_str());
+        return p;
+    }
+}
+
+int hexToInt(String hex)
+{
+    return (int)(strtol(string2char(hex), 0, 16));
+}
