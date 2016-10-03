@@ -22,7 +22,8 @@
     "babel-preset-es2015": "^6.16.0",
     "babel-preset-es2016": "^6.16.0",
     "babel-preset-stage-0": "^6.16.0",
-    "hap-nodejs": "^0.4.11"
+    "hap-nodejs": "^0.4.11",
+    "request-promise": "^4.1.1"
   },
   "devDependencies": {}
 }
