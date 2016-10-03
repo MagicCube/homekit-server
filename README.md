@@ -2,7 +2,7 @@
 Homekit server for My Raspberry PI.
 
 ## Video
-[Youtube](https://www.youtube.com/watch?v=06bmkNAvew8)
+[Youtube](https://youtu.be/06bmkNAvew8)
 [优酷](http://v.youku.com/v_show/id_XMTc0NzE3NTc4NA==.html)
 
 ## Roles in This Prototype
