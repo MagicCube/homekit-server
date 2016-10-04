@@ -1,23 +1,26 @@
 import request from "request-promise";
 import { Accessory, Characteristic, Service, uuid } from "hap-nodejs";
 
-let state = 0;
-let hsb = { h: 100, s: 100, b: 100 };
+const ip = "192.168.2.20";
 
-const lamp = new Accessory("台灯", uuid.generate("magiccube/homekit-server/Lamp"));
-lamp.addService(Service.Lightbulb, "LED")
+let ledState = 0;
+let hsb = { h: 0, s: 0, b: 100 };
+let dhtValue = null;
+
+const led = new Accessory("Lighthouse", uuid.generate("magiccube/homekit-server/LED"));
+led.addService(Service.Lightbulb, "RGB LED")
     .getCharacteristic(Characteristic.On)
     .on("get", callback => {
-        callback(null, state);
+        callback(null, ledState);
     })
     .on("set", async (value, callback) => {
-        state = value;
+        ledState = value;
         await request({
-            uri: `http://192.168.2.113/${state == 1 ? "on" : "off"}`
+            uri: `http://${ip}/led/${ledState == 1 ? "on" : "off"}`
         });
         callback();
     });
-lamp.getService(Service.Lightbulb)
+led.getService(Service.Lightbulb)
     .addCharacteristic(Characteristic.Hue)
     .on("get", callback => {
         callback(null, hsb.h);
@@ -27,7 +30,7 @@ lamp.getService(Service.Lightbulb)
         await applyHsb();
         callback();
     });
-lamp.getService(Service.Lightbulb)
+led.getService(Service.Lightbulb)
     .addCharacteristic(Characteristic.Saturation)
     .on("get", callback => {
         callback(null, hsb.s);
@@ -37,7 +40,7 @@ lamp.getService(Service.Lightbulb)
         await applyHsb();
         callback();
     });
-lamp.getService(Service.Lightbulb)
+led.getService(Service.Lightbulb)
     .addCharacteristic(Characteristic.Brightness)
     .on("get", callback => {
         callback(null, hsb.b);
@@ -48,11 +51,44 @@ lamp.getService(Service.Lightbulb)
         callback();
     });
 
+
+led
+    .addService(Service.TemperatureSensor)
+    .getCharacteristic(Characteristic.CurrentTemperature)
+    .on("get", callback => {
+       if (dhtValue)
+       {
+           callback(null, dhtValue.temperature)
+       }
+       else
+       {
+           callback("Not ready");
+       }
+   });
+led
+    .addService(Service.HumiditySensor)
+    .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+    .on("get", callback => {
+        if (dhtValue)
+        {
+            callback(null, dhtValue.humidity)
+        }
+        else
+        {
+            callback("Not ready");
+        }
+    });
+
+
+
+
+
+
 async function applyHsb()
 {
     const rgb = hsbToRGB(hsb);
     await request({
-        uri: `http://192.168.2.113/rgb/${rgb}`
+        uri: `http://${ip}/led/rgb/${rgb}${hex(hsb.b)}`
     });
 }
 
@@ -99,6 +135,28 @@ function hex(num)
     }
 }
 
+
+
+
+
+async function updateDht()
+{
+    dhtValue = await request({
+        uri: `http://${ip}/dht`,
+        json: true
+    });
+}
+
+async function updateDhtLoop()
+{
+    await updateDht();
+    setTimeout(updateDhtLoop, 5 * 1000);
+}
+updateDhtLoop();
+
+
+
+
 export {
-    lamp as accessory
+    led as accessory
 };
